@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bầu Cua Phát Tài</title>
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .item {
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+
+        .item img {
+            width: 100px;
+            height: 100px;
+            border: 2px solid transparent;
+        }
+
+        .item img.selected {
+            border-color: blue;
+        }
+
+        #status {
+            margin-top: 20px;
+        }
+
+        .selection-status {
+            position: absolute;
+            top: 0;
+            left: 0;
+            background-color: rgba(255, 255, 255, 0.7);
+            padding: 5px;
+            border-radius: 3px;
+            color: black;
+            font-size: 12px;
+            font-weight: bold;
+            display: none;
+            /* Hidden by default */
+        }
+    </style>
+</head>
+
+<body class="container">
+    <h1 class="text-center my-4">Bầu Cua Phát Tài</h1>
+
+    <div id="itemContainer" class="row">
+        <div class="col-4 item" data-item="nai">
+            <div class="position-relative">
+                <img src="assets/nai_highlight.png" alt="Nai" class="img-fluid">
+                <div class="selection-status" id="status-nai"></div>
+            </div>
+        </div>
+        <div class="col-4 item" data-item="bau">
+            <div class="position-relative">
+                <img src="assets/bau_highlight.png" alt="Bau" class="img-fluid">
+                <div class="selection-status" id="status-bau"></div>
+            </div>
+        </div>
+        <div class="col-4 item" data-item="ga">
+            <div class="position-relative">
+                <img src="assets/ga_highlight.png" alt="Ga" class="img-fluid">
+                <div class="selection-status" id="status-ga"></div>
+            </div>
+        </div>
+        <div class="col-4 item" data-item="ca">
+            <div class="position-relative">
+                <img src="assets/ca_highlight.png" alt="Ca" class="img-fluid">
+                <div class="selection-status" id="status-ca"></div>
+            </div>
+        </div>
+        <div class="col-4 item" data-item="cua">
+            <div class="position-relative">
+                <img src="assets/cua_highlight.png" alt="Cua" class="img-fluid">
+                <div class="selection-status" id="status-cua"></div>
+            </div>
+        </div>
+        <div class="col-4 item" data-item="tom">
+            <div class="position-relative">
+                <img src="assets/tom_highlight.png" alt="Tom" class="img-fluid">
+                <div class="selection-status" id="status-tom"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="text-center">
+        <button id="setItemsButton" class="btn btn-primary mt-4">Set Items</button>
+    </div>
+
+    <div class="text-center mt-4">
+        <h4>Adjust Probabilities</h4>
+        <div class="form-group">
+            <label for="sameItemProb">Probability for 3 of the same item:</label>
+            <input type="number" id="sameItemProb" class="form-control" step="0.01" min="0" max="1" value="0.01">
+        </div>
+        <div class="form-group">
+            <label for="pairProb">Probability for a pair:</label>
+            <input type="number" id="pairProb" class="form-control" step="0.01" min="0" max="1" value="0.3">
+        </div>
+        <button id="updateProbButton" class="btn btn-secondary mt-2">Update Probabilities</button>
+    </div>
+
+    <div id="status" class="text-center mt-4">
+        <p id="selectedCount">Selected items: 0</p>
+        <p id="message"></p>
+    </div>
+
+    <script>
+        const selectedItems = [];
+        const maxSelections = 3;
+
+        document.querySelectorAll('.item').forEach(itemElement => {
+            itemElement.addEventListener('click', () => {
+                const item = itemElement.dataset.item;
+                const statusElement = document.getElementById(`status-${item}`);
+
+                // Check how many times this item has been selected
+                const itemCount = selectedItems.filter(i => i === item).length;
+
+                // Allow only up to 3 selections of the same item
+                if (selectedItems.length >= maxSelections) {
+                    alert('You can only select up to 3 items. Resetting selections.');
+                    resetSelections();
+                    return;
+                }
+
+                // Add or remove item
+                if (itemCount < maxSelections) {
+                    selectedItems.push(item);
+                    itemElement.querySelector('img').classList.add('selected');
+
+                    // Update the selection status text
+                    const count = selectedItems.filter(i => i === item).length;
+                    statusElement.textContent = `Đã chọn${count > 1 ? ` x${count}` : ''}`;
+                    statusElement.style.display = 'block'; // Show the status
+                }
+
+                // Update the selected item count
+                document.getElementById('selectedCount').textContent = `Selected items: ${selectedItems.length}`;
+            });
+        });
+
+        document.getElementById('setItemsButton').addEventListener('click', async () => {
+            if (selectedItems.length !== maxSelections) {
+                alert('Please select exactly 3 items.');
+                return;
+            }
+
+            try {
+                const response = await fetch('http://localhost:3000/api/set-items', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ items: selectedItems }),
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                document.getElementById('message').textContent = data.message;
+
+                // Reset selection
+                resetSelections();
+
+            } catch (error) {
+                document.getElementById('message').textContent = 'Failed to set items: ' + error.message;
+            }
+        });
+
+        document.getElementById('updateProbButton').addEventListener('click', async () => {
+            const sameItemProb = parseFloat(document.getElementById('sameItemProb').value);
+            const pairProb = parseFloat(document.getElementById('pairProb').value);
+
+            if (isNaN(sameItemProb) || isNaN(pairProb)) {
+                alert('Please enter valid probabilities.');
+                return;
+            }
+
+            try {
+                const response = await fetch('http://localhost:3000/api/set-probabilities', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ sameItemProb, pairProb }),
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                document.getElementById('message').textContent = data.message;
+
+            } catch (error) {
+                document.getElementById('message').textContent = 'Failed to update probabilities: ' + error.message;
+            }
+        });
+
+        function resetSelections() {
+            selectedItems.length = 0;
+            document.querySelectorAll('.item img.selected').forEach(img => img.classList.remove('selected'));
+            document.querySelectorAll('.selection-status').forEach(status => {
+                status.textContent = '';
+                status.style.display = 'none'; // Hide the status
+            });
+            document.getElementById('selectedCount').textContent = `Selected items: 0`;
+        }
+    </script>
+</body>
+
+</html>
