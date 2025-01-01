@@ -37,7 +37,12 @@
             font-size: 12px;
             font-weight: bold;
             display: none;
-            /* Hidden by default */
+        }
+
+        /* CSS cho hiệu ứng fade-out */
+        body.fade-out {
+            opacity: 0;
+            transition: opacity 0.1s ease-out; /* Giảm thời gian fade-out xuống 0.3s */
         }
     </style>
 </head>
@@ -110,37 +115,39 @@
         const selectedItems = [];
         const maxSelections = 3;
 
+        // Lắng nghe sự kiện click trên từng phần tử item
         document.querySelectorAll('.item').forEach(itemElement => {
             itemElement.addEventListener('click', () => {
                 const item = itemElement.dataset.item;
                 const statusElement = document.getElementById(`status-${item}`);
 
-                // Check how many times this item has been selected
+                // Kiểm tra số lần đã chọn item
                 const itemCount = selectedItems.filter(i => i === item).length;
 
-                // Allow only up to 3 selections of the same item
+                // Giới hạn số lượng lựa chọn là 3
                 if (selectedItems.length >= maxSelections) {
                     alert('You can only select up to 3 items. Resetting selections.');
                     resetSelections();
                     return;
                 }
 
-                // Add or remove item
+                // Thêm hoặc bỏ item
                 if (itemCount < maxSelections) {
                     selectedItems.push(item);
                     itemElement.querySelector('img').classList.add('selected');
 
-                    // Update the selection status text
+                    // Cập nhật trạng thái lựa chọn
                     const count = selectedItems.filter(i => i === item).length;
                     statusElement.textContent = `Đã chọn${count > 1 ? ` x${count}` : ''}`;
-                    statusElement.style.display = 'block'; // Show the status
+                    statusElement.style.display = 'block';
                 }
 
-                // Update the selected item count
+                // Cập nhật số lượng item đã chọn
                 document.getElementById('selectedCount').textContent = `Selected items: ${selectedItems.length}`;
             });
         });
 
+        // Xử lý sự kiện set items khi nhấn nút
         document.getElementById('setItemsButton').addEventListener('click', async () => {
             if (selectedItems.length !== maxSelections) {
                 alert('Please select exactly 3 items.');
@@ -163,7 +170,7 @@
                 const data = await response.json();
                 document.getElementById('message').textContent = data.message;
 
-                // Reset selection
+                // Reset selections
                 resetSelections();
 
             } catch (error) {
@@ -171,6 +178,7 @@
             }
         });
 
+        // Xử lý sự kiện cập nhật xác suất
         document.getElementById('updateProbButton').addEventListener('click', async () => {
             const sameItemProb = parseFloat(document.getElementById('sameItemProb').value);
             const pairProb = parseFloat(document.getElementById('pairProb').value);
@@ -201,15 +209,25 @@
             }
         });
 
+        // Hàm reset selections
         function resetSelections() {
             selectedItems.length = 0;
             document.querySelectorAll('.item img.selected').forEach(img => img.classList.remove('selected'));
             document.querySelectorAll('.selection-status').forEach(status => {
                 status.textContent = '';
-                status.style.display = 'none'; // Hide the status
+                status.style.display = 'none';
             });
             document.getElementById('selectedCount').textContent = `Selected items: 0`;
         }
+
+        // Xử lý sự kiện double-click trên toàn bộ body
+        document.body.addEventListener('dblclick', () => {
+            // Thêm lớp fade-out để thực hiện hiệu ứng mờ dần
+            document.body.classList.add('fade-out');
+
+            // Chuyển hướng ngay lập tức khi fade-out bắt đầu
+            window.location.replace("newPage.html"); // Thay "newPage.html" bằng URL của bạn
+        });
     </script>
 </body>
 
